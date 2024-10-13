@@ -6,10 +6,11 @@ from tensorflow.keras.models import Model
 import matplotlib.pyplot as plt
 import os
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
+import math
 
 # Hyperparameters
-epochs = 30  # Adjust this as needed
-batch_size = 32
+epochs = 2
+batch_size = 64
 drop = 0.4
 
 train_dir = "/Users/jakehopkins/Downloads/Cats or Dogs/train"
@@ -61,97 +62,73 @@ print(f"Number of validation images: {val_count}")
 def Cats_Dogs(nbr_classes=2):
     my_input = Input(shape=(150, 150, 3))
     
-    x = Conv2D(32, (21, 21), activation='relu')(my_input)
+    x = Conv2D(32, (3, 3), activation='relu')(my_input)
     x = MaxPooling2D()(x)
     x = BatchNormalization()(x)
     x = Dropout(0.3)(x)
 
-    x = Conv2D(64, (15, 15), activation='relu')(x)
+    x = Conv2D(64, (3, 3), activation='relu')(x)
     x = MaxPooling2D()(x)
     x = BatchNormalization()(x)
     x = Dropout(drop)(x)
 
-    x = Conv2D(128, (9, 9), activation='relu')(x)
+    x = Conv2D(128, (3, 3), activation='relu')(x)
     x = MaxPooling2D()(x)
     x = BatchNormalization()(x)
     x = Dropout(drop)(x)
 
-    x = Conv2D(128, (5, 5), activation='relu')(x)
-    x = MaxPooling2D()(x)
-    x = BatchNormalization()(x)
-    x = Dropout(drop)(x)
-
-    x = Conv2D(256, (3, 3), activation='relu', padding='same')(x)
-    x = MaxPooling2D()(x)
-    x = BatchNormalization()(x)
-    x = Dropout(drop)(x)
-
-    x = GlobalAveragePooling2D()(x)
     x = Flatten()(x)
-    x = Dense(64, activation='relu')(x)
+    x = Dense(512, activation='relu')(x)
+    x = BatchNormalization()(x)
     x = Dropout(drop)(x)
     x = Dense(32, activation='relu')(x)
     x = Dense(nbr_classes, activation='softmax')(x)
 
     return Model(inputs=my_input, outputs=x)
 
-# Call the function to create the generators
+# Create the generators
 train_generator, validation_generator = create_generators(train_dir, val_dir)
 
-if __name__ == '__main__':
-    # Ensure your directories are set
-    train_dir = "/Users/jakehopkins/Downloads/Cats or Dogs/train"
-    val_dir = "/Users/jakehopkins/Downloads/Cats or Dogs/validation"
+# Calculate steps using ceiling division
+steps_per_epoch = math.ceil(train_count / batch_size)
+validation_steps = math.ceil(val_count / batch_size)
 
-    # Count images
-    train_count = count_images(train_dir)
-    val_count = count_images(val_dir)
-    print(f"Number of training images: {train_count}")
-    print(f"Number of validation images: {val_count}")
+# Build the model
+model = Cats_Dogs(2)
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
 
-    # Create train and validation generators
-    train_generator, validation_generator = create_generators(train_dir, val_dir)
+# Callbacks for saving the model and early stopping
+path_to_save_model = '/Users/jakehopkins/Downloads/best_model.keras'
+ckpt_saver = ModelCheckpoint(
+    path_to_save_model,
+    monitor='val_accuracy',
+    mode='max',
+    save_best_only=True,
+    verbose=1
+)
 
-    # Calculate steps
-    steps_per_epoch = train_count // batch_size
-    validation_steps = val_count // batch_size
+early_stop = EarlyStopping(
+    monitor='val_loss',
+    patience=10,
+    restore_best_weights=True,
+    verbose=1
+)
 
-    # Instantiate and compile the model
-    model = Cats_Dogs(2)
-    model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+# Train the model
+history = model.fit(
+    train_generator,
+    steps_per_epoch=steps_per_epoch,
+    epochs=epochs,
+    validation_data=validation_generator,
+    validation_steps=validation_steps,
+    callbacks=[ckpt_saver, early_stop]
+)
 
-    # Set up model saving and early stopping
-    path_to_save_model = '/Users/jakehopkins/Downloads/best_model.keras'
-    ckpt_saver = ModelCheckpoint(
-        path_to_save_model,
-        monitor='val_accuracy',
-        mode='max',
-        save_best_only=True,
-        verbose=1
-    )
-
-    early_stop = EarlyStopping(
-        monitor='val_loss',
-        patience=10,
-        restore_best_weights=True,
-        verbose=1
-    )
-
-    # Train the model
-    history = model.fit(
-        train_generator,
-        steps_per_epoch=steps_per_epoch,
-        epochs=epochs,
-        validation_data=validation_generator,
-        validation_steps=validation_steps,
-        callbacks=[ckpt_saver, early_stop]
-    )
-
-    # Plot training history
-    plt.plot(history.history['accuracy'], label='train accuracy')
-    plt.plot(history.history['val_accuracy'], label='val accuracy')
-    plt.title('Model Accuracy')
-    plt.ylabel('Accuracy')
-    plt.xlabel('Epoch')
-    plt.legend()
-    plt.show()
+# Plot training history
+plt.plot(history.history['accuracy'], label='train accuracy')
+plt.plot(history.history['val_accuracy'], label='val accuracy')
+plt.title('Model Accuracy')
+plt.ylabel('Accuracy')
+plt.xlabel('Epoch')
+plt.legend()
+plt.show()
