@@ -12,7 +12,6 @@ import math
 epochs = 2
 batch_size = 64
 drop = 0.4
-
 train_dir = "/Users/jakehopkins/Downloads/Cats or Dogs/train"
 val_dir = "/Users/jakehopkins/Downloads/Cats or Dogs/validation"
 
@@ -27,7 +26,6 @@ def create_generators(train_dir, val_dir):
         horizontal_flip=True,
         fill_mode='nearest'
     )
-
     val_datagen = ImageDataGenerator(rescale=1./255)
     
     train_generator = train_datagen.flow_from_directory(
@@ -37,7 +35,7 @@ def create_generators(train_dir, val_dir):
         color_mode='rgb',
         class_mode='categorical'
     )
-
+    
     validation_generator = val_datagen.flow_from_directory(
         val_dir,
         target_size=(150, 150),
@@ -45,7 +43,7 @@ def create_generators(train_dir, val_dir):
         color_mode='rgb',
         class_mode='categorical'
     )
-
+    
     return train_generator, validation_generator
 
 def count_images(directory):
@@ -61,29 +59,24 @@ print(f"Number of validation images: {val_count}")
 
 def Cats_Dogs(nbr_classes=2):
     my_input = Input(shape=(150, 150, 3))
-    
     x = Conv2D(32, (3, 3), activation='relu')(my_input)
     x = MaxPooling2D()(x)
     x = BatchNormalization()(x)
     x = Dropout(0.3)(x)
-
     x = Conv2D(64, (3, 3), activation='relu')(x)
     x = MaxPooling2D()(x)
     x = BatchNormalization()(x)
     x = Dropout(drop)(x)
-
     x = Conv2D(128, (3, 3), activation='relu')(x)
     x = MaxPooling2D()(x)
     x = BatchNormalization()(x)
     x = Dropout(drop)(x)
-
     x = Flatten()(x)
     x = Dense(512, activation='relu')(x)
     x = BatchNormalization()(x)
     x = Dropout(drop)(x)
     x = Dense(32, activation='relu')(x)
     x = Dense(nbr_classes, activation='softmax')(x)
-
     return Model(inputs=my_input, outputs=x)
 
 # Create the generators
