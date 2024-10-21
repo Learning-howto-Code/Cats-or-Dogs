@@ -1,127 +1,77 @@
 import tensorflow as tf
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from tensorflow.keras import layers, models
-from tensorflow.keras.layers import Conv2D, Input, Dense, MaxPooling2D, BatchNormalization, GlobalAveragePooling2D, Flatten, Dropout
-from tensorflow.keras.models import Model
-import matplotlib.pyplot as plt
-import os
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout, Input
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
-import math
+import os
 
-# Hyperparameters
-epochs = 2
-batch_size = 64
-drop = 0.4
-train_dir = "/Users/jakehopkins/Downloads/Cats or Dogs/train"
-val_dir = "/Users/jakehopkins/Downloads/Cats or Dogs/validation"
+# Define parameters
+img_height, img_width = 150, 150
+batch_size = 32
+epochs = 50
 
-def create_generators(train_dir, val_dir):
-    train_datagen = ImageDataGenerator(
-        rescale=1./255,
-        rotation_range=0.1,
-        width_shift_range=0.1,
-        height_shift_range=0.1,
-        shear_range=0.1,
-        zoom_range=0.1,
-        horizontal_flip=True,
-        fill_mode='nearest'
-    )
-    val_datagen = ImageDataGenerator(rescale=1./255)
-    
-    train_generator = train_datagen.flow_from_directory(
-        train_dir,
-        target_size=(150, 150),
+# Define the data directories
+train_dir = '/Users/jakehopkins/Downloads/Cats or Dogs/train'
+validation_dir = '/Users/jakehopkins/Downloads/Cats or Dogs/validation'
+
+# Function to create a tf.data.Dataset from directory
+def create_dataset(directory, is_training=True):
+    dataset = tf.keras.preprocessing.image_dataset_from_directory(
+        directory,
+        image_size=(img_height, img_width),
         batch_size=batch_size,
-        color_mode='rgb',
-        class_mode='categorical'
+        label_mode='binary',
+        shuffle=is_training
     )
     
-    validation_generator = val_datagen.flow_from_directory(
-        val_dir,
-        target_size=(150, 150),
-        batch_size=batch_size,
-        color_mode='rgb',
-        class_mode='categorical'
-    )
+    # Data augmentation for training set
+    if is_training:
+        data_augmentation = tf.keras.Sequential([
+            tf.keras.layers.RandomFlip("horizontal"),
+            tf.keras.layers.RandomRotation(0.2),
+            tf.keras.layers.RandomZoom(0.2),
+        ])
+        dataset = dataset.map(lambda x, y: (data_augmentation(x, training=True), y),
+                              num_parallel_calls=tf.data.AUTOTUNE)
     
-    return train_generator, validation_generator
+    return dataset.prefetch(buffer_size=tf.data.AUTOTUNE)
 
-def count_images(directory):
-    count = 0
-    for root, dirs, files in os.walk(directory):
-        count += len([file for file in files if file.lower().endswith(('jpg', 'jpeg', 'png', 'bmp', 'gif'))])
-    return count
+# Create datasets
+train_dataset = create_dataset(train_dir, is_training=True)
+validation_dataset = create_dataset(validation_dir, is_training=False)
 
-train_count = count_images(train_dir)
-val_count = count_images(val_dir)
-print(f"Number of training images: {train_count}")
-print(f"Number of validation images: {val_count}")
+# Define the model
+model = Sequential([
+    Input(shape=(img_height, img_width, 3)),
+    Conv2D(32, (3, 3), activation='relu'),
+    MaxPooling2D(2, 2),
+    Conv2D(64, (3, 3), activation='relu'),
+    MaxPooling2D(2, 2),
+    Conv2D(64, (3, 3), activation='relu'),
+    MaxPooling2D(2, 2),
+    Flatten(),
+    Dense(64, activation='relu'),
+    Dropout(0.5),
+    Dense(1, activation='sigmoid')
+])
 
-def Cats_Dogs(nbr_classes=2):
-    my_input = Input(shape=(150, 150, 3))
-    x = Conv2D(32, (3, 3), activation='relu')(my_input)
-    x = MaxPooling2D()(x)
-    x = BatchNormalization()(x)
-    x = Dropout(0.3)(x)
-    x = Conv2D(64, (3, 3), activation='relu')(x)
-    x = MaxPooling2D()(x)
-    x = BatchNormalization()(x)
-    x = Dropout(drop)(x)
-    x = Conv2D(128, (3, 3), activation='relu')(x)
-    x = MaxPooling2D()(x)
-    x = BatchNormalization()(x)
-    x = Dropout(drop)(x)
-    x = Flatten()(x)
-    x = Dense(512, activation='relu')(x)
-    x = BatchNormalization()(x)
-    x = Dropout(drop)(x)
-    x = Dense(32, activation='relu')(x)
-    x = Dense(nbr_classes, activation='softmax')(x)
-    return Model(inputs=my_input, outputs=x)
+# Compile the model
+model.compile(optimizer='adam',
+              loss='binary_crossentropy',
+              metrics=['accuracy'])
 
-# Create the generators
-train_generator, validation_generator = create_generators(train_dir, val_dir)
-
-# Calculate steps using ceiling division
-steps_per_epoch = math.ceil(train_count / batch_size)
-validation_steps = math.ceil(val_count / batch_size)
-
-# Build the model
-model = Cats_Dogs(2)
-model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
-
-# Callbacks for saving the model and early stopping
-path_to_save_model = '/Users/jakehopkins/Downloads/best_model.keras'
-ckpt_saver = ModelCheckpoint(
-    path_to_save_model,
-    monitor='val_accuracy',
-    mode='max',
-    save_best_only=True,
-    verbose=1
-)
-
-early_stop = EarlyStopping(
-    monitor='val_loss',
-    patience=10,
-    restore_best_weights=True,
-    verbose=1
-)
+# Define callbacks
+early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
+model_checkpoint = ModelCheckpoint('best_model.keras', save_best_only=True, monitor='val_loss')
 
 # Train the model
 history = model.fit(
-    train_generator,
-    steps_per_epoch=steps_per_epoch,
+    train_dataset,
     epochs=epochs,
-    validation_data=validation_generator,
-    validation_steps=validation_steps,
-    callbacks=[ckpt_saver, early_stop]
+    validation_data=validation_dataset,
+    callbacks=[early_stopping, model_checkpoint]
 )
 
-# Plot training history
-plt.plot(history.history['accuracy'], label='train accuracy')
-plt.plot(history.history['val_accuracy'], label='val accuracy')
-plt.title('Model Accuracy')
-plt.ylabel('Accuracy')
-plt.xlabel('Epoch')
-plt.legend()
-plt.show()
+# Save the final model
+model.save('final_model.keras')
+
+print("Training completed. Model saved.")
