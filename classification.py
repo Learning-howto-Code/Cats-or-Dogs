@@ -3,16 +3,19 @@ import shutil
 import random
 import numpy as np
 from PIL import Image
+import pdb
 
 def clear_directories():
     """
     Clears specific directories before moving and resizing images.
     """
+    path = '/Users/jakehopkins/Downloads'
+    pdb.set_trace()
     directories_to_clear = [
-        "/Users/jakehopkins/Downloads/Cats or Dogs/validation/Dog",
-        "/Users/jakehopkins/Downloads/Cats or Dogs/validation/Cat",
-        "/Users/jakehopkins/Downloads/Cats or Dogs/train/Dog",
-        "/Users/jakehopkins/Downloads/Cats or Dogs/train/Cat"
+        f"{path}/Cats or Dogs/validation/Dog",
+        f"{path}/Cats or Dogs/validation/Cat",
+        f"{path}/Cats or Dogs/train/Dog",
+        f"{path}/Cats or Dogs/train/Cat"
     ]
 
     for directory in directories_to_clear:
