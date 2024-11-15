@@ -5,6 +5,9 @@
 		},
 		{
 			"path": "../../introToTensorflow2"
+		},
+		{
+			"path": "../Gpm_cnn"
 		}
 	],
 	"settings": {}
