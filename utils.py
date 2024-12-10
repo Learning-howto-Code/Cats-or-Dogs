@@ -17,10 +17,10 @@ def split_and_move_images_and_resize(src_path, dest_train, dest_val, val_ratio=0
         Clears specific directories before moving and resizing images.
         """
         directories_to_clear = [
-            "/Users/jakehopkins/Downloads/Cats or Dogs/validation/Dog",
-            "/Users/jakehopkins/Downloads/Cats or Dogs/validation/Cat",
-            "/Users/jakehopkins/Downloads/Cats or Dogs/train/Dog",
-            "/Users/jakehopkins/Downloads/Cats or Dogs/train/Cat"
+           '/Users/jakehopkins/Desktop/clean:dirty/Clean 1.75 gpm',
+            '/Users/jakehopkins/Desktop/clean:dirty/Clean 2.5 gpm',
+            '/Users/jakehopkins/Desktop/clean:dirty/Clean .75 gpm',
+            '/Users/jakehopkins/Desktop/clean:dirty/Clean 5 gpm'
         ]
 
         for directory in directories_to_clear:

@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
 # Load the saved model
-model_path = '/Users/jakehopkins/Downloads/best_model_deep.keras'
+model_path = '/Users/jakehopkins/Desktop/Gpm_cnn/best_model.keras'
 model = tf.keras.models.load_model(model_path)
 
 # Define parameters
@@ -12,7 +12,7 @@ img_height, img_width = 150, 150
 batch_size = 32
 
 # Load the validation dataset
-validation_dir = '/Users/jakehopkins/Downloads/Cats or Dogs/validation'
+validation_dir = '/Users/jakehopkins/Desktop/clean:dirty/Validation'
 validation_dataset = tf.keras.preprocessing.image_dataset_from_directory(
     validation_dir,
     image_size=(img_height, img_width),
